@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LMS Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f4f6f9;
+      }
+      h2 {
+        font-size: 42px;
+        text-align: center;
+        margin-top: 16px;
+        margin-bottom: 16px;
+      }
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 3fr;
+        gap: 20px;
+        padding: 20px;
+      }
+      .sidebar {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .content {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .card-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+      }
+      .card {
+        background: linear-gradient(135deg, #2c8487, #5151e5);
+        color: white;
+        width: 280px;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s;
+      }
+      .card:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>LMS Dashboard</h2>
+    <div class="dashboard">
+      <div class="sidebar">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="content">
+        <div class="card-container" id="courseContainer"></div>
+      </div>
+    </div>
+
+    <script>
+      async function fetchExcelData(filePath) {
+        try {
+          const response = await fetch(filePath);
+          if (!response.ok) throw new Error("Failed to fetch Excel file");
+          const arrayBuffer = await response.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(sheet);
+          displayCourses(jsonData);
+          generateChart(jsonData);
+        } catch (error) {
+          console.error("Error loading Excel file:", error);
+        }
+      }
+
+      function displayCourses(courses) {
+        const container = document.getElementById("courseContainer");
+        container.innerHTML = "";
+        courses.forEach((course) => {
+          const card = document.createElement("div");
+          card.classList.add("card");
+          card.innerHTML = `
+                    <p><strong>Employee Number:</strong> ${
+                      course.EmployeeNumber || "N/A"
+                    }</p>
+                    <p><strong>User ID:</strong> ${course.UserId || "N/A"}</p>
+                    <p><strong>Name:</strong> ${course.Name || "N/A"}</p>
+                    <p><strong>Request Date:</strong> ${
+                      course.RequestDate || "N/A"
+                    }</p>
+                    <p><strong>Coaching Date:</strong> ${
+                      course.CoachingNeedDate || "N/A"
+                    }</p>
+                    <p><strong>Requested Coaching:</strong> ${
+                      course.RequestedCoaching || "N/A"
+                    }</p>
+                    <p><strong>Preferred Time:</strong> ${
+                      course.PreferedTime || "N/A"
+                    }</p>
+                `;
+          container.appendChild(card);
+        });
+      }
+
+      function generateChart(data) {
+        const ctx = document.getElementById("chart").getContext("2d");
+        const labels = data.map((item) => item.RequestedCoaching || "Unknown");
+        const values = labels.reduce((acc, curr) => {
+          acc[curr] = (acc[curr] || 0) + 1;
+          return acc;
+        }, {});
+
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            datasets: [
+              {
+                label: "Coaching Requests",
+                data: Object.values(values),
+                backgroundColor: ["#72edf9", "#5151e5", "#ff9f43", "#ff3f34"],
+                borderWidth: 1,
+              },
+            ],
+            labels: Object.keys(values),
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      fetchExcelData("CLASSREQUEST.xlsx");
+    </script>
+  </body>
+</html>
