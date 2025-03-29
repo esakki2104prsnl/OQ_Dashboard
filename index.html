@@ -164,55 +164,116 @@
     </div>
 
     <script>
-      async function fetchExcelData(filePath) {
-        try {
-          const response = await fetch(filePath);
-          if (!response.ok) throw new Error("Failed to fetch Excel file");
-          const arrayBuffer = await response.arrayBuffer();
-          const workbook = XLSX.read(arrayBuffer, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(sheet);
-          displayCourses(jsonData);
-          generateChart(jsonData);
-        } catch (error) {
-          console.error("Error loading Excel file:", error);
-        }
+      // POST
+      function getToken111() {
+        console.log(
+          "Basic " +
+            btoa(
+              "omanoil:cb07136a44f952f6206cd2ccd6491592badcf4f528b09c965693a05b9af223da"
+            )
+        );
+
+        //Post
+        const myHeadersPost = new Headers();
+        myHeadersPost.append(
+          "Authorization",
+          "Basic " +
+            btoa(
+              "omanoil:c6441f97c176a7724deb5de8656968d5d051e9794f49f2b3d3ffa3ba0249489f"
+            )
+        );
+        myHeadersPost.append("Content-Type", "application/json");
+        myHeadersPost.append(
+          "Cookie",
+          "JSESSIONID=D1340D4F80D3177677CA9D12F6F88C52; route=332d6ac36226d9ff4628cfe8b713cb867ab60204"
+        );
+
+        const raw = JSON.stringify({
+          grant_type: "client_credentials",
+          scope: {
+            userId: "7010842",
+            companyId: "omanoil",
+            userType: "admin",
+            resourceType: "learning_public_api",
+          },
+        });
+
+        const requestOptionsPost = {
+          method: "POST",
+          headers: myHeadersPost,
+          body: raw,
+          redirect: "follow",
+          crossDomain: true,
+        };
+
+        fetch(
+          "https://cors-anywhere.herokuapp.com/https://omanoil.plateau.com/learning/oauth-api/rest/v1/token",
+          requestOptionsPost
+        )
+          .then((response) => response.text())
+          .then((result) => {
+            var resp = JSON.parse(result);
+            // GET
+            const myHeadersGet = new Headers();
+            myHeadersGet.append(
+              "Authorization",
+              resp["token_type"] + " " + resp["access_token"]
+            );
+            myHeadersGet.append(
+              "Cookie",
+              "JSESSIONID=D1340D4F80D3177677CA9D12F6F88C52; route=0dee5a0724f517466d5bec76a1fcfa9d9652023e"
+            );
+
+            const requestOptionsGet = {
+              method: "GET",
+              headers: myHeadersGet,
+              redirect: "follow",
+              crossDomain: true,
+            };
+
+            fetch(
+              "https://cors-anywhere.herokuapp.com/https://omanoil.plateau.com/learning/odatav4/public/user/learningHistory/v1/learninghistorys?$filter=criteria/targetUserID eq '7010842'",
+              requestOptionsGet
+            )
+              .then((response) => response.text())
+              .then((result) => {
+                var courseList = JSON.parse(result)["value"];
+                displayCourses(courseList);
+                generateChart(courseList);
+              })
+              .catch((error) => console.error(error));
+          })
+          .catch((error) => console.error(error));
       }
 
       function displayCourses(courses) {
         const container = document.getElementById("courseContainer");
         container.innerHTML = "";
         courses.forEach((course) => {
+          console.log(course);
           const card = document.createElement("div");
           card.classList.add("card");
+
           card.innerHTML = `
-                    <p><strong>Employee Number:</strong> ${
-                      course.EmployeeNumber || "N/A"
-                    }</p>
-                    <p><strong>User ID:</strong> ${course.UserId || "N/A"}</p>
-                    <p><strong>Name:</strong> ${course.Name || "N/A"}</p>
-                    <p><strong>Request Date:</strong> ${
-                      course.RequestDate || "N/A"
-                    }</p>
-                    <p><strong>Coaching Date:</strong> ${
-                      course.CoachingNeedDate || "N/A"
-                    }</p>
-                    <p><strong>Requested Coaching:</strong> ${
-                      course.RequestedCoaching || "N/A"
-                    }</p>
-                    <p><strong>Preferred Time:</strong> ${
-                      course.PreferedTime || "N/A"
-                    }</p>
-                `;
+              <p><strong>Course Title:</strong> ${course.title || "N/A"}</p>
+              <p><strong>Instructor:</strong> ${
+                course.instructorName || "N/A"
+              }</p>
+              <p><strong>Total Hours:</strong> ${course.totalHours || "N/A"}</p>
+              <p><strong>Revision Date:</strong> ${
+                new Date(course.revisionDate).toLocaleString("en-GB") || "N/A"
+              }</p>
+              <p><strong>Status:</strong> ${course.status || "N/A"}</p>
+          `;
           container.appendChild(card);
         });
       }
 
       function generateChart(data) {
+        console.log(data);
         const ctx = document.getElementById("chart").getContext("2d");
         const ctx2 = document.getElementById("chart1").getContext("2d");
-        const labels = data.map((item) => item.RequestedCoaching || "Unknown");
+        const labels = data.map((item) => item.title || "Unknown");
         const values = labels.reduce((acc, curr) => {
           acc[curr] = (acc[curr] || 0) + 1;
           return acc;
@@ -254,7 +315,8 @@
         });
       }
 
-      fetchExcelData("CLASSREQUEST.xlsx");
+      // fetchExcelData("CLASSREQUEST.xlsx");
+      getToken111();
     </script>
   </body>
 </html>
